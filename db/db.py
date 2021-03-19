@@ -1,5 +1,6 @@
 #  Импортируем библиотеку SQLAlchemy
 import sqlalchemy
+# не забудь установить pip install psycopg2
 
 
 # Создаем базу данных
@@ -44,7 +45,8 @@ def insert_data(arg_1, arg):
         insert = f"INSERT INTO user_id(id, url_id) VALUES('{uid[0]}', '{uid[1]}');"
         arg_1.execute(insert)
         for photo in url[1]:
-            insert = f"INSERT INTO photo(id, photo_url) VALUES('{uid[0]}', '{photo}');"
+            photo_url = list(photo.items())[0][1]
+            insert = f"INSERT INTO photo(id, photo_url) VALUES('{uid[0]}', '{photo_url}');"
             arg_1.execute(insert)
 
 

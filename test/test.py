@@ -7,9 +7,9 @@ class MyTestCase(unittest.TestCase):
 
     def setUp(self):
         print("method setUp")
-        self.token = "enter yourself token"     # введите свой токен
+        self.token = "enter yourself token"     # введите свой токен от вк
         self.vk_session = vk_api.VkApi(token=self.token)
-        self.vk_session.get_api()
+        self.vk = self.vk_session.get_api()
         self.vk_auth = self.vk_session.get_api()
         self.users_id = self.vk_auth.users.get(fields="bdate, sex, city, relation")
         self.uid = self.users_id[0].get('id')
@@ -30,14 +30,17 @@ class MyTestCase(unittest.TestCase):
                              {109630621: 'https://vk.com/id109630621'})
 
     def test_top_photo(self):
-        list_candidates = [{"304063054": "https://vk.com/id304063054"}]
-        top_photo_result = [{"304063054": "https://vk.com/id304063054",
-                             "url_photo": ["https://sun9-36.userapi.com/impf/c625723/v625723054/2a1f5/EIF0Y5hEJ20.jpg"
-                                           "?size=1280x854&quality=96&sign=e1317e80685534fc396b76d2effed76f&c_uniq_tag="
-                                           "Uye9OaOk4w-AVw2bWD5DgPi3YjbyDvnSRHyReAervAI&type=album",
-                                           "https://sun9-71.userapi.com/impf/c625724/v625724054/2f7f0/G7ynNhPpBPA.jpg?"
-                                           "size=1280x960&quality=96&sign=25f8ebe22c27e351c2fd907cb140474d&c_uniq_tag="
-                                           "6RGHpJQB0ECjBzZaOGm9PWuWWWQCIddGBnhA9fpw0ZI&type=album"]}]
+        list_candidates = [{225090124: 'https://vk.com/id225090124'}]
+        top_photo_result = [{225090124: 'https://vk.com/id225090124', 'url_photo': [
+            {336916735: 'https://sun9-69.userapi.com/impf/CtX3CBMkQbl8iM6uDpZlB8osCy2tvtj878pQ7A/R3fLme8IObs.jpg?'
+                        'size=1059x909&quality=96&sign=502f032bdc768d38b11b3d2dc1e03608&c_uniq_tag='
+                        '_n-meHj7Ltd7yQBIFWkFW_x9avVZReqCCZHOZMgaPjw&type=album'},
+            {343291494: 'https://sun9-49.userapi.com/impf/KXj5i_33CDE_iFCh7s9U9MSYpzxqtx1ofUcGpQ/mhedl_Hk04g.jpg?'
+                        'size=719x1080&quality=96&sign=383cae46cde4e317007b8ec0c7f0f525&c_uniq_tag='
+                        '076nMOSXvoRPSdlZ4uCYAJpnLkbll4nvgDC3fm-1S0Q&type=album'},
+            {379014038: 'https://sun9-73.userapi.com/impf/c627231/v627231124/1287d/rRNHmg062zs.jpg?'
+                        'size=715x882&quality=96&sign=703cc3381d205807d6f5221ed857c38f&c_uniq_tag='
+                        'gX4TSpwfwa8zuEK1Zl2Os_DRSxaAHJ5FIx6Pr-247bo&type=album'}]}]
 
         self.assertListEqual(User.top_photo(self, list_candidates), top_photo_result)
 

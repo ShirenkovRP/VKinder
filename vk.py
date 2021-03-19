@@ -1,37 +1,10 @@
 from datetime import datetime
+import random
 import json
 import time
 import vk_api
+from vk_api.longpoll import VkLongPoll, VkEventType
 # https://vk-api.readthedocs.io/en/latest/index.html# - ссылка на документацию vk_api
-
-
-#  Получение токена для работы с API
-def vk(login, password):
-    try:
-        scope = "FRIEND, PHOTOS, PAGES , STATUS, OFFLINE, DOCS, GROUPS"
-        vk_session = vk_api.VkApi(login, password, scope=scope)
-        vk_session.auth()
-        return vk_session.get_api()
-    except vk_api.exceptions.AuthError:
-        print("Неверный логин или пароль")
-        login = int(input("Введите номер телефона: "))
-        password = input("Введите пароль: ")
-        vk(login, password)
-
-
-#   Создание возрастного диапазано  для поиска
-def set_age():
-    try:
-        print('\nВведите возрастной диапазон')
-        age_from = int(input('Возраст от: '))
-        age_to = int(input('Возраст до: '))
-        while age_to < age_from:
-            print(f"Неверно указан возраст должен быть больше {age_from}")
-            age_to = int(input('Возраст до: '))
-        return age_from, age_to
-    except ValueError:
-        print("Должно быть целое число")
-        set_age()
 
 
 #  Запись результата в файл
@@ -42,16 +15,18 @@ def write_json(data_to_write):
 
 class User:
 
-    def __init__(self, vk_auth):
-        self.vk_auth = vk_auth
+    def __init__(self, login, password):
+
+        self.vk_session = vk_api.VkApi(login, password)
+        self.vk_session.auth()
+        self.vk = self.vk_session.get_api()
 
     # Получаем информацию о полтзователе
     def users_id(self, uid=None):
-        user_information = self.vk_auth.users.get(user_ids=uid, fields="bdate, sex, city, relation")
+        user_information = self.vk.users.get(user_ids=uid, fields="bdate, sex, city, relation")
         time.sleep(0.27)
         return user_information
 
-    # Дополняем недостающю недостающую информацию
     # Составляем условия поиска
     @staticmethod
     def requirements(arg):
@@ -63,33 +38,24 @@ class User:
             this_year = datetime.now().year
             requirements["age_from"] = this_year - year_birth - 2
             requirements["age_to"] = this_year - year_birth + 2
-            print(f"Возраст от: {this_year - year_birth - 2}")
-            print(f"Возраст до: {this_year - year_birth + 2}")
         else:
-            age_1 = set_age()
-            requirements["age_from"] = age_1[0]
-            requirements["age_to"] = age_1[1]
+            requirements["age_from"] = None
+            requirements["age_to"] = None
         # пол
         sex = arg[0].get('sex')
         if sex == 1:
             sex = 2
-            print(f"\nИщем мужчину")
         elif sex == 2:
             sex = 1
-            print(f"\nИщем женщину")
         else:
-            print("Укажите пол для поиска")
-            sex = int(input("1 - женский 2 - мужской: "))
+            sex = None
         requirements["sex"] = sex
         # город
         city = arg[0].get('city').get('title')
         if city is not None:
             requirements["city"] = city
-            print(f"\nПроживает в {city}")
         else:
-            print("Укажите город")
-            city = input("Введите название города: ")
-            requirements["city"] = city
+            requirements["city"] = None
         return requirements
 
     # Ищем 10 пользователей с подходящими условиями
@@ -99,10 +65,10 @@ class User:
         status = 1
         age_from = arg["age_from"]
         age_to = arg["age_to"]
-        user_search = self.vk_auth.users.search(count=1000, hometown=hometown,
-                                                sex=sex, status=status,
-                                                age_from=age_from, age_to=age_to,
-                                                fields="is_closed")
+        user_search = self.vk.users.search(count=1000, hometown=hometown,
+                                           sex=sex, status=status,
+                                           age_from=age_from, age_to=age_to,
+                                           fields="is_closed")
         time.sleep(0.27)
         address_list = []
         for i in user_search["items"]:
@@ -118,7 +84,7 @@ class User:
         for i in list_candidates:
             # Получаем список фото пользователя
             uid = i.keys()
-            top3photo = self.vk_auth.photos.get(owner_id=uid, album_id="profile", extended=1)
+            top3photo = self.vk.photos.get(owner_id=uid, album_id="profile", extended=1)
             time.sleep(0.27)
             # Создаем список лайков и сортируем по убыванию
             likes_list = []
@@ -129,7 +95,37 @@ class User:
             list_url_photo = []
             for photo_i in top3photo["items"]:
                 if photo_i["likes"]["count"] in likes_list[0: 3]:
-                    list_url_photo.append(photo_i["sizes"][-1]["url"])
+                    list_url_photo.append({photo_i["id"]: photo_i["sizes"][-1]["url"]})
             # Добовляем список uri фото в список пользователей
             i["url_photo"] = list_url_photo
         return list_candidates
+
+
+# Класс для взаимедействия с группой
+class Communication:
+
+    def __init__(self, token):
+        self.token = token
+        self.vk = vk_api.VkApi(token=self.token)
+        self.vk._auth_token()
+        self.longpol = VkLongPoll(self.vk)
+
+    # слушаем сервер
+    def listen(self):
+        for event in self.longpol.listen():
+            if event.type == VkEventType.MESSAGE_NEW:
+                if event.to_me:
+                    return int(event.user_id), event.text
+                break
+
+    # отправка сообщений
+    def send_message(self, user_id, text, keyboard=None, template=None):
+        self.vk.method("messages.send", {"user_id": user_id, "message": text,
+                                         "random_id": random.randrange(10 ** 7),
+                                         "keyboard": keyboard, "template": template})
+
+    # отправка файла
+    def send_message_media(self, user_id, arg):
+        self.vk.method("messages.send", {"user_id": user_id,
+                                         "random_id": random.randrange(10 ** 7),
+                                         "attachment": arg})
