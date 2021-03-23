@@ -98,6 +98,9 @@ class User:
                     list_url_photo.append({photo_i["id"]: photo_i["sizes"][-1]["url"]})
             # Добовляем список uri фото в список пользователей
             i["url_photo"] = list_url_photo
+        # JSON-файл с 10 объектами, где у каждого объекта перечислены топ-3 фотографии и ссылка на аккаунт.
+        write_json(list_candidates)
+
         return list_candidates
 
 
