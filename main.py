@@ -3,6 +3,7 @@ from db import db
 import vk
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
+
 mylogin = "yourself login"
 mypassword = "yourself password"
 token_group = "yourself token group"
@@ -76,14 +77,13 @@ class VkGroup:
 
 def main():
     con = db.create_database("db_vk")
-    elimination_id = db.select_user_id(con)
     vk_bot = VkGroup(mylogin, mypassword, token_group)
-
     # Создание кнопки
     keyboard = VkKeyboard(one_time=False)
     keyboard.add_button('поиск кандидатов', color=VkKeyboardColor.SECONDARY)
 
     while True:
+        elimination_id = db.select_user_id(con)
         vk_bot.sending_message.send_message(vk_bot.mess_id,
                                             "нажмите на поиск кандидатов ", keyboard=keyboard.get_keyboard())
         if vk_bot.mess_text() == "поиск кандидатов":
